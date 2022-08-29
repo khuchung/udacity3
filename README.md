@@ -59,20 +59,28 @@ You will need to install the following locally:
 2. Re-deploy the web app to publish changes
 
 ## Monthly Cost Analysis
-Complete a month cost analysis of each Azure resource to give an estimate total cost using the table below:
+Monthly cost analysis in a production-level environment as table below:
 
-| Azure Resource                              | Service Tier                                                                    | Monthly Cost         |
-| ------------                                | ------------                                                                    | ------------         |
-| Storage account                             | Storage (general purpose v1)                                                    | $0.25 for 10GB       |
-| Application Insights: Data ingestion	       | Monthly usage (last 31 days)	0.002 GB /Price 2.30 USD                          | $0.00                |
-| Azure Functions                             | Consumption Plan w Memory 1GB, Execution time 2000ms, 1,000,000 execution/month | $25.60               |
-| Azure Database for PostgreSQL single server | Basic, 1 vCore(s), 5 GB                                                         | $24.82               |
-| App Service                                 | F1                                                                              | $0.00                |
-| Azure Service Bus                           | Basic                                                                           | $0.05/Million/Month  |
-=> Total: $50.72
+| Azure Resource                              | Service Tier                                                                             | Monthly Cost         |
+| ------------                                | ------------                                                                             | ------------         |
+| Storage account                             | Standard, General Purpose V2, 64GB                                                       | $2.38                |
+| Azure Functions                             | Consumption Plan w Memory 1GB, Execution time 2000ms, 1,000,000 execution/month          | $25.60               |
+| Azure Database for PostgreSQL single server | General Purpose, Gen 5, 2 vCore, $0.1752/hour x 730h, 64GB Storage, 128GB Backup storage | $148.06              |
+| App Service                                 | P1V2: 1 Cores(s), 3.5 GB RAM, 250 GB Storage, $0.115                                     | $83.95               |
+| Azure Service Bus                           | Standard                                                                                 | $9.81                |
+=> Total: $269.8
 ## Architecture Explanation
 This is a placeholder section where you can provide an explanation and reasoning for your architecture selection for both the Azure Web App and Azure Function.
 - Azure Web App is the place where I can deploy a web application. It's a flask app that connects with PostgreSQL database where I can store and retrieve the database.
 - User can registers to our web app, and it'll add to the `attendee` table in the database
 - Azure function is based on serverless architecture. I use the service bus trigger here. It uses for sending the email notification to the list of attendees once it's triggered. Also, update the database to show how many attendees were notified to the database.
 - When the new notification is created. I'll save the information into the database. Also, create a message to Azure service bus. It's saved into a queue. The queue triggers Azure function app.
+
+### Drawbacks of the existing architecture
+- With that architecture, the email send by the application when creating a notification. With every attendee, one email is sent. It takes a lot of time to process when there're a lot of attendees, eg: 1000. It is bad for the user experience because the browser will hang/not response for a while. It can lead to time out if it takes more than 300s. Also, user cannot create multiple notifications in a short time.
+
+### With background job to send email by using Azure Service Bus
+- When using new architecture, the web application just need to save the notification into the DB and create a message to queue. The web application returns success to user in no time.
+- When the queue is created, it will trigger Azure Function. Here, it can take time to send email to all attendees. After finish, the Azure function have to update database to update the status and the completed time of the notification. So that the user can understand all the emails sent.
+- Advantages: Users can create notifications without waiting for server sending email. The email will be accomplished by Azure Service Bus and Azure Functions(with `serviceBusTrigger` setup)
+- Disadvantages: need to pay for extra services: Azure Function and Azure Service Bus. But the price is fair($35.41/month) and it is worth the value.
