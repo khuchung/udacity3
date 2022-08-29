@@ -61,11 +61,18 @@ You will need to install the following locally:
 ## Monthly Cost Analysis
 Complete a month cost analysis of each Azure resource to give an estimate total cost using the table below:
 
-| Azure Resource | Service Tier | Monthly Cost |
-| ------------ | ------------ | ------------ |
-| *Azure Postgres Database* |     |              |
-| *Azure Service Bus*   |         |              |
-| ...                   |         |              |
-
+| Azure Resource                              | Service Tier                                                                    | Monthly Cost         |
+| ------------                                | ------------                                                                    | ------------         |
+| Storage account                             | Storage (general purpose v1)                                                    | $0.25 for 10GB       |
+| Application Insights: Data ingestion	       | Monthly usage (last 31 days)	0.002 GB /Price 2.30 USD                          | $0.00                |
+| Azure Functions                             | Consumption Plan w Memory 1GB, Execution time 2000ms, 1,000,000 execution/month | $25.60               |
+| Azure Database for PostgreSQL single server | Basic, 1 vCore(s), 5 GB                                                         | $24.82               |
+| App Service                                 | F1                                                                              | $0.00                |
+| Azure Service Bus                           | Basic                                                                           | $0.05/Million/Month  |
+=> Total: $50.72
 ## Architecture Explanation
 This is a placeholder section where you can provide an explanation and reasoning for your architecture selection for both the Azure Web App and Azure Function.
+- Azure Web App is the place where I can deploy a web application. It's a flask app that connects with PostgreSQL database where I can store and retrieve the database.
+- User can registers to our web app, and it'll add to the `attendee` table in the database
+- Azure function is based on serverless architecture. I use the service bus trigger here. It uses for sending the email notification to the list of attendees once it's triggered. Also, update the database to show how many attendees were notified to the database.
+- When the new notification is created. I'll save the information into the database. Also, create a message to Azure service bus. It's saved into a queue. The queue triggers Azure function app.
